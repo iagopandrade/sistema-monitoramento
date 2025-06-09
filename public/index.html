@@ -1,0 +1,77 @@
+<!-- public/index.html -->
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+  <meta charset="UTF-8">
+  <title>Painel Hidrelétrica</title>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <style>
+    body { font-family: Arial; padding: 20px; background: #f5f5f5; }
+    canvas { background: #fff; border: 1px solid #ccc; margin-bottom: 20px; }
+  </style>
+</head>
+<body>
+  <h1>Painel de Monitoramento - Hidrelétrica</h1>
+
+  <canvas id="grafico" width="600" height="300"></canvas>
+
+  <script>
+    const grafico = new Chart(document.getElementById('grafico').getContext('2d'), {
+      type: 'line',
+      data: {
+        labels: [],
+        datasets: [
+          {
+            label: 'Pressão (bar)',
+            data: [],
+            borderColor: 'blue',
+            backgroundColor: 'rgba(0, 0, 255, 0.1)',
+            fill: false
+          },
+          {
+            label: 'Vazão (L/s)',
+            data: [],
+            borderColor: 'green',
+            backgroundColor: 'rgba(0, 255, 0, 0.1)',
+            fill: false
+          }
+        ]
+      },
+      options: {
+        responsive: true,
+        scales: {
+          x: { title: { display: true, text: 'Horário' } },
+          y: { title: { display: true, text: 'Valor' } }
+        }
+      }
+    });
+
+    async function atualizarGraficos() {
+      try {
+        const response = await fetch('/dados.json');
+        if (!response.ok) throw new Error('Erro ao buscar dados');
+        const dados = await response.json();
+
+        const agora = Date.now();
+        const dadosUltimoMinuto = dados.filter(d => {
+          const tempo = new Date(d.timestamp).getTime();
+          return (agora - tempo) <= 60000;
+        });
+
+        const labels = dadosUltimoMinuto.map(d => new Date(d.timestamp).toLocaleTimeString());
+        const pressao = dadosUltimoMinuto.map(d => d.pressao);
+        const vazao = dadosUltimoMinuto.map(d => d.vazao);
+
+        grafico.data.labels = labels;
+        grafico.data.datasets[0].data = pressao;
+        grafico.data.datasets[1].data = vazao;
+        grafico.update();
+      } catch (error) {
+        console.error(error);
+      }
+    }
+    atualizarGraficos();
+    setInterval(atualizarGraficos, 60000);
+  </script>
+</body>
+</html>
